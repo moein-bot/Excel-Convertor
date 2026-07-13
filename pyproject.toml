@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "excel-convertor"
+version = "0.1.0"
+description = "Transfer data between Excel workbooks using configurable mappings."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+authors = [
+    { name = "Your Name" }
+]
+
+dependencies = [
+    "openpyxl>=3.1",
+    "pandas>=2.2",
+    "PyYAML>=6.0",
+    "click>=8.1"
+]
+
+[project.scripts]
+excel-convertor = "excel_convertor.cli:main"
