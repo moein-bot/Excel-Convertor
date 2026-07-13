@@ -1,11 +1,11 @@
 import logging
 
-from .config import LOG_DIR, LOG_FILE
+from .config import LOG_DIR, DEFAULT_LOG_FILE
 
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def get_logger(name: str) -> logging.Logger:
+def get_logger(name: str):
 
     logger = logging.getLogger(name)
 
@@ -19,7 +19,7 @@ def get_logger(name: str) -> logging.Logger:
     )
 
     file_handler = logging.FileHandler(
-        LOG_FILE,
+        DEFAULT_LOG_FILE,
         encoding="utf-8",
     )
 
