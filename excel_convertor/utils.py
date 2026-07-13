@@ -1,6 +1,14 @@
 from pathlib import Path
 
 
+def normalize(value):
+
+    if value is None:
+        return ""
+
+    return str(value).strip()
+
+
 def ensure_directory(path: Path):
 
     path.mkdir(
@@ -9,14 +17,31 @@ def ensure_directory(path: Path):
     )
 
 
-def normalize_header(value):
+def is_excel(path: Path):
 
-    if value is None:
-        return ""
-
-    return str(value).strip()
+    return path.suffix.lower() == ".xlsx"
 
 
-def is_excel_file(path):
+def split_persian_date(date_string):
 
-    return str(path).lower().endswith(".xlsx")
+    if date_string is None:
+        return "", "", ""
+
+    date_string = str(date_string)
+
+    if "/" in date_string:
+        year, month, day = date_string.split("/")
+
+    elif "-" in date_string:
+        year, month, day = date_string.split("-")
+
+    else:
+        raise ValueError(
+            f"Invalid Persian date: {date_string}"
+        )
+
+    return (
+        int(year),
+        int(month),
+        int(day),
+    )
