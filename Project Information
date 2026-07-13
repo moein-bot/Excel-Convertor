@@ -1,0 +1,733 @@
+# Excel Convertor — Data Import Tool Specification
+
+## 1. Roles and Inputs / Outputs
+
+## Roles
+
+### 1. User
+
+Provides:
+
+* Source Excel file (`input.xlsx`)
+* Mapping configuration (`mapping.json` / `mapping.yaml`)
+
+### 2. Converter Engine
+
+Responsible for:
+
+* Reading input workbook
+* Validating schema
+* Applying transformations
+* Mapping fields
+* Generating output workbook
+
+### 3. Output Consumer
+
+Receives:
+
+* Generated Excel file (`output.xlsx`)
+
+---
+
+# Input
+
+## User Excel
+
+Example:
+
+`input.xlsx`
+
+Sheet:
+
+```
+Users
+```
+
+Schema:
+
+| Column         | Type    | Required |
+| -------------- | ------- | -------- |
+| نام            | String  | Yes      |
+| نام خانوادگی   | String  | Yes      |
+| شماره شناسنامه | String  | Yes      |
+| تاریخ تولد     | Date    | Yes      |
+| کد ملی         | String  | Yes      |
+| جنسیت          | Integer | Yes      |
+| کد وضعیت تأهل  | Integer | Yes      |
+
+Example row:
+
+| نام | نام خانوادگی | تاریخ تولد | جنسیت |
+| --- | ------------ | ---------- | ----- |
+| علی | احمدی        | 1382/05/09 | 1     |
+
+---
+
+# Mapping Configuration
+
+Stored separately:
+
+```
+mapping.json
+```
+
+Example:
+
+```json
+{
+  "source_sheet": "Users",
+  "destination_sheet": "Sheet1",
+
+  "fields": [
+
+    {
+      "source": "نام",
+      "target": "Name",
+      "type": "string",
+      "transform": [
+        "trim"
+      ]
+    },
+
+    {
+      "source": "نام خانوادگی",
+      "target": "LName",
+      "type": "string",
+      "transform": [
+        "trim"
+      ]
+    },
+
+    {
+      "source": "شماره شناسنامه",
+      "target": "IdentityNo",
+      "type": "string"
+    },
+
+
+    {
+      "source": "تاریخ تولد",
+      "target": [
+        "BirthYear",
+        "BirthMonth",
+        "BirthDay"
+      ],
+      "type": "persian_date"
+    },
+
+
+    {
+      "source": "کد ملی",
+      "target": "CodeMelli",
+      "type": "string"
+    },
+
+
+    {
+      "source": "جنسیت",
+      "target": "Jens",
+      "type": "mapping",
+
+      "values": {
+        "1": 26,
+        "2": 27
+      }
+    },
+
+
+    {
+      "source": "کد وضعیت تأهل",
+      "target": "tahol",
+      "type": "mapping",
+
+      "values": {
+        "2": 76,
+        "3": 77
+      }
+    }
+
+  ]
+}
+```
+
+---
+
+# Output
+
+Generated:
+
+```
+output.xlsx
+```
+
+Example:
+
+Sheet:
+
+```
+Sheet1
+```
+
+Result:
+
+| Name | LName | IdentityNo | BirthYear | BirthMonth | BirthDay | CodeMelli  | Jens | tahol |
+| ---- | ----- | ---------- | --------- | ---------- | -------- | ---------- | ---- | ----- |
+| علی  | احمدی | 12345      | 1382      | 5          | 9        | 0012345678 | 26   | 76    |
+
+---
+
+# 2. Functional Requirements
+
+---
+
+# 2.1 Input Validation
+
+The validator should check:
+
+## File Validation
+
+* File exists
+* File extension is `.xlsx`
+* Workbook is readable
+
+Example error:
+
+```
+ERROR:
+Input file not found:
+users.xlsx
+```
+
+---
+
+# Schema Validation
+
+Schema file:
+
+```
+schema.json
+```
+
+Example:
+
+```json
+{
+  "sheet":"Users",
+
+  "required":[
+    "نام",
+    "نام خانوادگی",
+    "کد ملی"
+  ],
+
+  "types":{
+
+    "نام":"string",
+
+    "کد ملی":"string",
+
+    "جنسیت":"integer"
+
+  }
+}
+```
+
+---
+
+Validation errors:
+
+Example:
+
+```
+Row: 15
+Column: کد ملی
+
+Expected:
+string length 10
+
+Received:
+123
+```
+
+---
+
+# 2.2 Mapping Engine
+
+Responsibilities:
+
+```
+Input Row
+
+     |
+     v
+
+Mapping Engine
+
+     |
+     v
+
+Output Row
+```
+
+Example:
+
+Input:
+
+```python
+{
+"نام":" علی ",
+"جنسیت":1
+}
+```
+
+Mapping:
+
+```json
+{
+"نام":"Name",
+"جنسیت":"Jens"
+}
+```
+
+Output:
+
+```python
+{
+"Name":"علی",
+"Jens":26
+}
+```
+
+---
+
+# 2.3 Supported Transformations
+
+## trim
+
+Input:
+
+```
+" Ali "
+```
+
+Output:
+
+```
+"Ali"
+```
+
+---
+
+## uppercase
+
+Input:
+
+```
+ali
+```
+
+Output:
+
+```
+ALI
+```
+
+---
+
+## lowercase
+
+Input:
+
+```
+ALI
+```
+
+Output:
+
+```
+ali
+```
+
+---
+
+## date formatting
+
+Input:
+
+```
+1382/05/09
+```
+
+Output:
+
+```json
+{
+"year":1382,
+"month":5,
+"day":9
+}
+```
+
+---
+
+## calculation
+
+Example:
+
+Mapping:
+
+```json
+{
+"type":"calculation",
+"formula":"price * quantity"
+}
+```
+
+Input:
+
+```
+price=100
+quantity=5
+```
+
+Output:
+
+```
+500
+```
+
+---
+
+# 2.4 Multiple Sheet Support
+
+Configuration:
+
+```json
+{
+"source_sheet":"Customers",
+"destination_sheet":"Customers_Output"
+}
+```
+
+The engine should support:
+
+```
+input.xlsx
+
+├── Customers
+├── Orders
+└── Products
+```
+
+---
+
+# 2.5 Error Reporting
+
+Error file:
+
+```
+logs/errors.json
+```
+
+Example:
+
+```json
+[
+ {
+  "row":15,
+  "column":"کد ملی",
+  "error":"Invalid length"
+ },
+
+ {
+  "row":20,
+  "column":"تاریخ تولد",
+  "error":"Invalid date"
+ }
+]
+```
+
+---
+
+# 2.6 Performance Requirements
+
+For large files:
+
+Use:
+
+```
+openpyxl read_only mode
+```
+
+and:
+
+```
+write_only mode
+```
+
+Example:
+
+```python
+load_workbook(
+    file,
+    read_only=True
+)
+```
+
+Benefits:
+
+* Low memory usage
+* Supports hundreds of thousands of rows
+
+---
+
+# 3. Non-functional Requirements
+
+## Deterministic
+
+Same:
+
+```
+input.xlsx
++
+mapping.json
+```
+
+always produces:
+
+```
+same output.xlsx
+```
+
+---
+
+## Cross Platform
+
+Supported:
+
+```
+Windows
+Linux
+MacOS
+```
+
+Python:
+
+```
+3.11+
+```
+
+---
+
+## Testing
+
+Structure:
+
+```
+tests/
+
+├── test_validator.py
+
+├── test_mapper.py
+
+├── test_transformations.py
+
+└── test_end_to_end.py
+```
+
+---
+
+# 4. Repository Layout
+
+```
+Excel-Convertor/
+
+│
+├── README.md
+├── LICENSE
+├── requirements.txt
+├── pyproject.toml
+│
+├── excel_convertor/
+│
+│   ├── __init__.py
+│
+│   ├── cli.py
+│
+│   ├── converter.py
+│
+│   ├── data_mapper.py
+│
+│   ├── validator.py
+│
+│   ├── io_handler.py
+│
+│   ├── transformations/
+│   │
+│   ├── date.py
+│   ├── string.py
+│   └── mapping.py
+│
+│
+├── mappings/
+│
+│   └── mapping.json
+│
+├── schemas/
+│
+│   └── schema.json
+│
+├── examples/
+│
+│   ├── input.xlsx
+│   └── expected_output.xlsx
+│
+├── tests/
+│
+└── logs/
+```
+
+---
+
+# CLI Usage
+
+Install:
+
+```bash
+pip install -r requirements.txt
+```
+
+Run:
+
+```bash
+python -m excel_convertor.cli \
+--input examples/input.xlsx \
+--mapping mappings/mapping.json \
+--output output/output.xlsx
+```
+
+Result:
+
+```
+Conversion completed
+
+Rows processed:
+1500
+
+Errors:
+0
+
+Output:
+output/output.xlsx
+```
+
+---
+
+# 5. Recommended Assumptions
+
+## Language
+
+✅ Python 3.11+
+
+Reason:
+
+* openpyxl ecosystem
+* easier Excel formatting preservation
+* better for template-based Excel conversion
+
+---
+
+## Excel Library
+
+Recommended:
+
+```
+openpyxl
+```
+
+Not pandas as the primary engine because:
+
+* pandas destroys Excel formatting
+* cannot preserve validations/styles
+* not ideal for template filling
+
+---
+
+## Workflow
+
+Recommended:
+
+```
+Single input sheet
+        |
+        |
+Mapping
+        |
+        |
+Single output sheet
+```
+
+MVP.
+
+Later:
+
+```
+Multiple input sheets
+        |
+        |
+Multiple outputs
+```
+
+---
+
+## Modification Strategy
+
+Recommended:
+
+❌ Never modify input.xlsx
+
+Always:
+
+```
+input.xlsx
+
+       |
+
+converter
+
+       |
+
+output.xlsx
+```
+
+Reason:
+
+* safer
+* reproducible
+* easier debugging
+
+---
+
+# Final MVP Scope
+
+### Phase 1
+
+✅ Single sheet
+✅ JSON mapping
+✅ Excel → Excel
+✅ Column rename
+✅ Date split
+✅ Value mapping
+✅ Validation
+✅ Error reporting
+
+### Phase 2
+
+* Multiple sheets
+* YAML mappings
+* Web API
+* Download endpoint
+* Background processing
+* Progress tracking
+
+This specification matches the architecture i have already started building for **Excel Convertor**.
